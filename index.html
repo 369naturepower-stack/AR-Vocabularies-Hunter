@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TechVocab AR Hunter</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root{
+  --bg-0:#101216;
+  --bg-1:#1a1d24;
+  --bg-2:#20242d;
+  --panel-border: rgba(255,255,255,0.08);
+  --orange:#FF6A13;
+  --yellow:#FFD400;
+  --blue:#29B6F6;
+  --green:#00E28A;
+  --red:#FF3B5C;
+  --text:#F4F5F0;
+  --muted:#9399A6;
+  --stripe: repeating-linear-gradient(45deg, var(--yellow) 0 14px, #1a1a1a 14px 28px);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{
+  background:
+    radial-gradient(circle at 15% 0%, rgba(41,182,246,0.10), transparent 40%),
+    radial-gradient(circle at 90% 100%, rgba(255,106,19,0.12), transparent 45%),
+    var(--bg-0);
+  color:var(--text);
+  font-family:'Inter', sans-serif;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+.app{ max-width:520px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; position:relative;}
+
+/* ===== HAZARD STRIPE BAR ===== */
+.hazard-bar{ height:6px; background:var(--stripe); flex-shrink:0; }
+
+/* ===== TOP HUD ===== */
+.hud{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px; background:var(--bg-1); border-bottom:1px solid var(--panel-border);
+  flex-shrink:0;
+}
+.hud-logo{ display:flex; align-items:center; gap:10px; }
+.hud-logo .mark{
+  width:34px;height:34px; border-radius:6px;
+  background:linear-gradient(135deg, var(--orange), var(--yellow));
+  display:flex; align-items:center; justify-content:center; font-size:18px;
+  box-shadow:0 0 0 2px var(--bg-1), 0 0 0 3px var(--orange);
+}
+.hud-logo h1{
+  font-family:'Oswald', sans-serif; font-size:16px; letter-spacing:0.5px;
+  text-transform:uppercase; line-height:1.05;
+}
+.hud-logo span{ display:block; font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--blue); letter-spacing:1.5px;}
+.hud-stats{ display:flex; gap:10px; font-family:'JetBrains Mono', monospace; }
+.stat{
+  background:var(--bg-2); border:1px solid var(--panel-border); border-radius:8px;
+  padding:5px 9px; text-align:center; min-width:52px;
+}
+.stat b{ display:block; font-size:14px; color:var(--yellow); }
+.stat small{ font-size:8px; color:var(--muted); letter-spacing:0.5px; }
+
+/* ===== SCREENS ===== */
+.screen{ flex:1; display:none; flex-direction:column; padding:20px 16px 90px; }
+.screen.active{ display:flex; animation:fadeIn .35s ease; }
+@keyframes fadeIn{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+
+/* ===== HOME ===== */
+.hero{
+  border-radius:16px; padding:24px 18px; position:relative; overflow:hidden;
+  background:linear-gradient(160deg, var(--bg-2) 0%, var(--bg-1) 100%);
+  border:1px solid var(--panel-border); margin-bottom:20px;
+}
+.hero::before{
+  content:""; position:absolute; top:-40px; right:-40px; width:160px; height:160px;
+  background:radial-gradient(circle, rgba(255,106,19,0.35), transparent 70%);
+}
+.eyebrow{
+  font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:2px;
+  color:var(--blue); text-transform:uppercase; display:flex; align-items:center; gap:8px; margin-bottom:10px;
+}
+.eyebrow::before{ content:""; width:16px; height:2px; background:var(--blue); }
+.hero h2{
+  font-family:'Oswald', sans-serif; font-size:28px; line-height:1.1; text-transform:uppercase;
+  margin-bottom:8px;
+}
+.hero h2 em{ font-style:normal; color:var(--orange); }
+.hero p{ color:var(--muted); font-size:13.5px; line-height:1.5; max-width:40ch; }
+
+.section-label{
+  font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--muted);
+  letter-spacing:1.5px; text-transform:uppercase; margin:18px 0 10px; display:flex; align-items:center; gap:8px;
+}
+.section-label::after{ content:""; flex:1; height:1px; background:var(--panel-border); }
+
+.cat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.cat-card{
+  background:var(--bg-1); border:1px solid var(--panel-border); border-radius:12px;
+  padding:14px; cursor:pointer; text-align:left; transition:.15s; position:relative; overflow:hidden;
+}
+.cat-card:active{ transform:scale(0.97); }
+.cat-card.selected{ border-color:var(--orange); box-shadow:0 0 0 1px var(--orange); }
+.cat-card .icon{ font-size:26px; margin-bottom:8px; display:block; }
+.cat-card .name{ font-family:'Oswald',sans-serif; font-size:14px; text-transform:uppercase; letter-spacing:.3px; }
+.cat-card .count{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--muted); margin-top:4px; }
+.cat-card .progress-track{ height:4px; background:var(--bg-2); border-radius:2px; margin-top:8px; overflow:hidden; }
+.cat-card .progress-fill{ height:100%; background:linear-gradient(90deg, var(--blue), var(--green)); width:0%; transition:width .4s; }
+
+.mode-list{ display:flex; flex-direction:column; gap:10px; }
+.mode-btn{
+  display:flex; align-items:center; gap:14px; background:var(--bg-1);
+  border:1px solid var(--panel-border); border-radius:12px; padding:14px; cursor:pointer;
+  text-align:left; color:var(--text); font-family:inherit; transition:.15s;
+}
+.mode-btn:active{ transform:scale(0.98); }
+.mode-btn .m-icon{
+  width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+  font-size:20px; flex-shrink:0;
+}
+.mode-btn.scan .m-icon{ background:rgba(41,182,246,0.15); color:var(--blue); }
+.mode-btn.quiz .m-icon{ background:rgba(255,212,0,0.15); color:var(--yellow); }
+.mode-btn.race .m-icon{ background:rgba(255,59,92,0.15); color:var(--red); }
+.mode-btn .m-title{ font-family:'Oswald', sans-serif; font-size:15px; text-transform:uppercase; letter-spacing:.3px; }
+.mode-btn .m-desc{ font-size:11.5px; color:var(--muted); margin-top:2px; }
+.mode-btn .m-arrow{ margin-left:auto; color:var(--muted); font-size:18px; }
+
+/* ===== SCAN SCREEN ===== */
+.scan-wrap{
+  position:relative; border-radius:16px; overflow:hidden; aspect-ratio:3/4; background:#05070a;
+  border:1px solid var(--panel-border);
+}
+.scan-wrap video{ width:100%; height:100%; object-fit:cover; display:block; }
+.scan-fallback-bg{
+  position:absolute; inset:0;
+  background:
+    linear-gradient(rgba(16,18,22,0.55), rgba(16,18,22,0.75)),
+    repeating-linear-gradient(120deg, #23303a 0 40px, #1a2530 40px 80px);
+}
+.reticle{ position:absolute; inset:14px; pointer-events:none; }
+.reticle .corner{ position:absolute; width:26px; height:26px; border:3px solid var(--blue); }
+.reticle .tl{ top:0; left:0; border-right:none; border-bottom:none; border-radius:6px 0 0 0; }
+.reticle .tr{ top:0; right:0; border-left:none; border-bottom:none; border-radius:0 6px 0 0; }
+.reticle .bl{ bottom:0; left:0; border-right:none; border-top:none; border-radius:0 0 0 6px; }
+.reticle .br{ bottom:0; right:0; border-left:none; border-top:none; border-radius:0 0 6px 0; }
+.scan-line{
+  position:absolute; left:14px; right:14px; height:2px;
+  background:linear-gradient(90deg, transparent, var(--blue), transparent);
+  box-shadow:0 0 12px 2px var(--blue);
+  animation:sweep 2.2s ease-in-out infinite;
+}
+@keyframes sweep{ 0%{top:14px;} 50%{top:calc(100% - 16px);} 100%{top:14px;} }
+.scan-status{
+  position:absolute; top:12px; left:50%; transform:translateX(-50%);
+  background:rgba(10,12,15,0.7); border:1px solid var(--panel-border); border-radius:20px;
+  padding:5px 14px; font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:1px;
+  color:var(--green); display:flex; align-items:center; gap:6px;
+}
+.scan-status .dot{ width:6px; height:6px; border-radius:50%; background:var(--green); animation:blink 1.4s infinite; }
+@keyframes blink{ 50%{opacity:.2;} }
+
+.ar-card{
+  position:absolute; left:12px; right:12px; bottom:12px;
+  background:rgba(20,22,28,0.94); backdrop-filter:blur(6px);
+  border:1px solid var(--orange); border-radius:14px; padding:16px;
+  transform:translateY(120%); transition:transform .4s cubic-bezier(.2,.9,.3,1.2);
+}
+.ar-card.show{ transform:translateY(0); }
+.ar-card .tag{
+  display:inline-block; font-family:'JetBrains Mono', monospace; font-size:9px; letter-spacing:1.5px;
+  color:var(--bg-0); background:var(--orange); padding:2px 8px; border-radius:4px; margin-bottom:8px; text-transform:uppercase;
+}
+.ar-word-row{ display:flex; align-items:center; gap:10px; }
+.ar-word-row .icon{ font-size:30px; }
+.ar-word-row h3{ font-family:'Oswald', sans-serif; font-size:22px; text-transform:uppercase; }
+.ar-phonetic{ font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--blue); margin-top:2px; }
+.ar-meaning{ font-size:13.5px; color:var(--text); margin-top:8px; }
+.ar-meaning b{ color:var(--yellow); }
+.ar-example{ font-size:12.5px; color:var(--muted); margin-top:6px; font-style:italic; }
+.ar-card-actions{ display:flex; gap:8px; margin-top:12px; }
+
+.btn{
+  border:none; border-radius:10px; padding:12px 16px; font-family:'Oswald', sans-serif;
+  font-size:13px; letter-spacing:.5px; text-transform:uppercase; cursor:pointer; transition:.15s;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.btn:active{ transform:scale(0.96); }
+.btn-primary{ background:linear-gradient(90deg, var(--orange), var(--yellow)); color:#1a1200; flex:1; }
+.btn-ghost{ background:var(--bg-2); color:var(--text); border:1px solid var(--panel-border); }
+.btn-block{ width:100%; margin-top:14px; }
+.btn-sm{ padding:9px 12px; font-size:11px; }
+
+.scan-controls{ display:flex; gap:10px; margin-top:16px; }
+.scan-progress{ margin-top:14px; }
+.scan-progress .bar-track{ height:8px; background:var(--bg-2); border-radius:4px; overflow:hidden; border:1px solid var(--panel-border); }
+.scan-progress .bar-fill{ height:100%; background:linear-gradient(90deg, var(--blue), var(--green)); width:0%; transition:width .4s; }
+.scan-progress .lbl{ display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); margin-top:6px; }
+
+/* ===== QUIZ ===== */
+.quiz-card{ background:var(--bg-1); border:1px solid var(--panel-border); border-radius:16px; padding:20px; }
+.quiz-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+.quiz-num{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--muted); }
+.timer-track{ width:100%; height:6px; background:var(--bg-2); border-radius:3px; overflow:hidden; margin-bottom:18px; }
+.timer-fill{ height:100%; background:linear-gradient(90deg, var(--green), var(--yellow), var(--red)); width:100%; transition:width 1s linear; }
+.quiz-icon-big{ font-size:44px; text-align:center; display:block; margin-bottom:6px;}
+.quiz-question{ font-family:'Oswald', sans-serif; font-size:19px; text-align:center; text-transform:uppercase; margin-bottom:4px; }
+.quiz-sub{ text-align:center; color:var(--muted); font-size:12.5px; margin-bottom:18px; }
+.opt-grid{ display:flex; flex-direction:column; gap:10px; }
+.opt-btn{
+  background:var(--bg-2); border:1px solid var(--panel-border); border-radius:10px;
+  padding:13px 14px; text-align:left; color:var(--text); font-family:'Inter'; font-size:14px;
+  cursor:pointer; display:flex; align-items:center; gap:10px; transition:.15s;
+}
+.opt-btn .opt-letter{
+  width:24px; height:24px; border-radius:6px; background:var(--bg-1); display:flex; align-items:center;
+  justify-content:center; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); flex-shrink:0;
+}
+.opt-btn:active{ transform:scale(0.98); }
+.opt-btn.correct{ border-color:var(--green); background:rgba(0,226,138,0.12); }
+.opt-btn.correct .opt-letter{ background:var(--green); color:#003420; }
+.opt-btn.wrong{ border-color:var(--red); background:rgba(255,59,92,0.12); }
+.opt-btn.wrong .opt-letter{ background:var(--red); color:#3a0010; }
+
+/* ===== RACE ===== */
+.race-hud{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.race-timer{
+  font-family:'JetBrains Mono', monospace; font-size:22px; color:var(--yellow);
+  background:var(--bg-1); border:1px solid var(--panel-border); padding:6px 14px; border-radius:10px;
+}
+.race-card{
+  background:var(--bg-1); border:1px solid var(--panel-border); border-radius:16px;
+  padding:26px 18px; text-align:center; margin-bottom:16px;
+}
+.race-card .icon{ font-size:40px; }
+.race-card .word{ font-family:'Oswald', sans-serif; font-size:24px; text-transform:uppercase; margin-top:6px; }
+.race-opts{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.race-opt{
+  background:var(--bg-2); border:1px solid var(--panel-border); border-radius:10px;
+  padding:14px 8px; font-size:13px; cursor:pointer; color:var(--text);
+}
+.race-opt.correct{ border-color:var(--green); background:rgba(0,226,138,0.15); }
+.race-opt.wrong{ border-color:var(--red); background:rgba(255,59,92,0.15); }
+
+/* ===== RESULTS ===== */
+.result-hero{ text-align:center; padding:28px 16px; }
+.result-hero .big-icon{ font-size:56px; }
+.result-hero h2{ font-family:'Oswald',sans-serif; font-size:24px; text-transform:uppercase; margin-top:10px; }
+.result-score{
+  font-family:'JetBrains Mono', monospace; font-size:42px; color:var(--yellow); margin:10px 0;
+}
+.badge-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px; }
+.badge{
+  background:var(--bg-1); border:1px solid var(--panel-border); border-radius:12px; padding:12px 6px;
+  text-align:center; opacity:.3; filter:grayscale(1);
+}
+.badge.earned{ opacity:1; filter:none; border-color:var(--yellow); box-shadow:0 0 0 1px var(--yellow); }
+.badge .b-icon{ font-size:22px; }
+.badge .b-name{ font-size:9px; color:var(--muted); margin-top:4px; letter-spacing:.3px; }
+
+/* ===== BOTTOM NAV ===== */
+.bottom-nav{
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:520px;
+  background:var(--bg-1); border-top:1px solid var(--panel-border); display:flex;
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+}
+.nav-btn{
+  flex:1; background:none; border:none; color:var(--muted); font-family:'JetBrains Mono',monospace;
+  font-size:9px; letter-spacing:1px; text-transform:uppercase; display:flex; flex-direction:column;
+  align-items:center; gap:4px; cursor:pointer; padding:6px;
+}
+.nav-btn .n-icon{ font-size:18px; }
+.nav-btn.active{ color:var(--orange); }
+
+.hidden{ display:none !important; }
+
+@media (prefers-reduced-motion: reduce){
+  .scan-line, .stat, .dot { animation:none !important; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hazard-bar"></div>
+
+  <!-- HUD -->
+  <div class="hud">
+    <div class="hud-logo">
+      <div class="mark">🛠️</div>
+      <div>
+        <h1>TechVocab<br>AR Hunter</h1>
+        <span>SCAN · SPEAK · SOLVE</span>
+      </div>
+    </div>
+    <div class="hud-stats">
+      <div class="stat"><b id="statScore">0</b><small>SKOR</small></div>
+      <div class="stat"><b id="statStreak">0</b><small>STREAK</small></div>
+    </div>
+  </div>
+
+  <!-- ===================== HOME ===================== -->
+  <div class="screen active" id="screen-home">
+    <div class="hero">
+      <div class="eyebrow">SMK Teknik · English Vocabulary Lab</div>
+      <h2>Buru Kosakata<br><em>Dunia Teknik</em> Pakai AR</h2>
+      <p>Pindai bengkel virtualmu, kumpulkan istilah teknis bahasa Inggris, dan uji kecepatanmu lewat tantangan seru.</p>
+    </div>
+
+    <div class="section-label">Pilih Kategori</div>
+    <div class="cat-grid" id="catGrid"></div>
+
+    <div class="section-label">Pilih Mode Permainan</div>
+    <div class="mode-list">
+      <button class="mode-btn scan" data-mode="scan">
+        <div class="m-icon">📡</div>
+        <div><div class="m-title">Scan & Learn</div><div class="m-desc">Pindai objek AR, kumpulkan kartu kosakata</div></div>
+        <div class="m-arrow">›</div>
+      </button>
+      <button class="mode-btn quiz" data-mode="quiz">
+        <div class="m-icon">🎯</div>
+        <div><div class="m-title">Quiz Challenge</div><div class="m-desc">10 soal pilihan ganda, adu skor tertinggi</div></div>
+        <div class="m-arrow">›</div>
+      </button>
+      <button class="mode-btn race" data-mode="race">
+        <div class="m-icon">⚡</div>
+        <div><div class="m-title">Word Race</div><div class="m-desc">60 detik, jawab sebanyak mungkin!</div></div>
+        <div class="m-arrow">›</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===================== SCAN ===================== -->
+  <div class="screen" id="screen-scan">
+    <div class="scan-wrap" id="scanWrap">
+      <div class="scan-fallback-bg" id="scanFallback"></div>
+      <video id="camVideo" autoplay playsinline muted></video>
+      <div class="scan-status"><span class="dot"></span><span id="scanStatusText">SIAP MEMINDAI</span></div>
+      <div class="reticle">
+        <div class="corner tl"></div><div class="corner tr"></div>
+        <div class="corner bl"></div><div class="corner br"></div>
+        <div class="scan-line" id="scanLine"></div>
+      </div>
+      <div class="ar-card" id="arCard">
+        <span class="tag" id="arTag">TERDETEKSI</span>
+        <div class="ar-word-row">
+          <span class="icon" id="arIcon">🔧</span>
+          <div>
+            <h3 id="arWord">WRENCH</h3>
+            <div class="ar-phonetic" id="arPhonetic">/rench/</div>
+          </div>
+        </div>
+        <div class="ar-meaning" id="arMeaning"><b>Arti:</b> Kunci pas</div>
+        <div class="ar-example" id="arExample">"Use the wrench to loosen the bolt."</div>
+        <div class="ar-card-actions">
+          <button class="btn btn-ghost btn-sm" id="btnSpeak">🔊 Dengar</button>
+          <button class="btn btn-primary btn-sm" id="btnCollect">✓ Simpan Kartu</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="scan-controls">
+      <button class="btn btn-ghost" id="btnBackHome1">‹ Kembali</button>
+      <button class="btn btn-primary" id="btnScan">📡 Pindai Objek</button>
+    </div>
+
+    <div class="scan-progress">
+      <div class="bar-track"><div class="bar-fill" id="scanBarFill"></div></div>
+      <div class="lbl"><span id="scanCollected">0 dikumpulkan</span><span id="scanTotal">/ 10 kata</span></div>
+    </div>
+  </div>
+
+  <!-- ===================== QUIZ ===================== -->
+  <div class="screen" id="screen-quiz">
+    <div class="quiz-card">
+      <div class="quiz-top">
+        <span class="quiz-num" id="quizNum">SOAL 1 / 10</span>
+        <span class="quiz-num" id="quizCat">OTOMOTIF</span>
+      </div>
+      <div class="timer-track"><div class="timer-fill" id="quizTimerFill"></div></div>
+      <span class="quiz-icon-big" id="quizIcon">🔧</span>
+      <div class="quiz-question" id="quizQuestion">Kata untuk "Kunci pas" adalah?</div>
+      <div class="quiz-sub" id="quizSub">Pilih jawaban bahasa Inggris yang tepat</div>
+      <div class="opt-grid" id="quizOpts"></div>
+    </div>
+  </div>
+
+  <!-- ===================== RACE ===================== -->
+  <div class="screen" id="screen-race">
+    <div class="race-hud">
+      <span class="quiz-num">WORD RACE</span>
+      <div class="race-timer" id="raceTimer">60</div>
+    </div>
+    <div class="race-card">
+      <div class="icon" id="raceIcon">⚡</div>
+      <div class="word" id="raceWord">SPARK PLUG</div>
+    </div>
+    <div class="quiz-sub" style="margin-bottom:10px;">Pilih arti bahasa Indonesia yang tepat, secepat mungkin!</div>
+    <div class="race-opts" id="raceOpts"></div>
+  </div>
+
+  <!-- ===================== RESULTS ===================== -->
+  <div class="screen" id="screen-result">
+    <div class="result-hero">
+      <div class="big-icon" id="resultIcon">🏆</div>
+      <h2 id="resultTitle">Kerja Bagus, Teknisi!</h2>
+      <div class="result-score" id="resultScore">0</div>
+      <div class="quiz-sub" id="resultDetail">Total skor kamu</div>
+    </div>
+    <div class="section-label">Lencana Diraih</div>
+    <div class="badge-grid" id="badgeGrid"></div>
+    <button class="btn btn-primary btn-block" id="btnReplay">🔁 Main Lagi</button>
+    <button class="btn btn-ghost btn-block" id="btnHome2">🏠 Kembali ke Menu</button>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" data-nav="home"><span class="n-icon">🏠</span>Beranda</button>
+    <button class="nav-btn" data-nav="scan"><span class="n-icon">📡</span>Scan</button>
+    <button class="nav-btn" data-nav="quiz"><span class="n-icon">🎯</span>Quiz</button>
+    <button class="nav-btn" data-nav="race"><span class="n-icon">⚡</span>Race</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ VOCAB DATA ============ */
+const VOCAB = {
+  otomotif: { name:"Otomotif", icon:"🚗", color:"var(--orange)", words:[
+    {w:"Wrench", ph:"/rench/", m:"Kunci pas", ex:"Use the wrench to loosen the bolt.", ic:"🔧"},
+    {w:"Piston", ph:"/PIS-tuhn/", m:"Piston", ex:"The piston moves inside the cylinder.", ic:"⚙️"},
+    {w:"Gearbox", ph:"/GEER-boks/", m:"Girboks / transmisi", ex:"Check the gearbox oil regularly.", ic:"⚙️"},
+    {w:"Brake Pad", ph:"/breyk pad/", m:"Kampas rem", ex:"Replace the brake pad every 20,000 km.", ic:"🛑"},
+    {w:"Spark Plug", ph:"/spahrk pluhg/", m:"Busi", ex:"The spark plug ignites the fuel mixture.", ic:"✨"},
+    {w:"Radiator", ph:"/REY-dee-ey-ter/", m:"Radiator", ex:"The radiator keeps the engine cool.", ic:"🌡️"},
+    {w:"Clutch", ph:"/kluhch/", m:"Kopling", ex:"Press the clutch before shifting gears.", ic:"🦶"},
+    {w:"Socket Wrench", ph:"/SOK-it rench/", m:"Kunci sok", ex:"A socket wrench removes tight nuts fast.", ic:"🔩"},
+    {w:"Jack", ph:"/jak/", m:"Dongkrak", ex:"Lift the car with a jack first.", ic:"🚗"},
+    {w:"Oil Filter", ph:"/oyl FIL-ter/", m:"Filter oli", ex:"Change the oil filter every service.", ic:"🛢️"},
+  ]},
+  kelistrikan: { name:"Kelistrikan", icon:"⚡", color:"var(--blue)", words:[
+    {w:"Multimeter", ph:"/MUHL-tee-mee-ter/", m:"Multimeter", ex:"Use a multimeter to check voltage.", ic:"📟"},
+    {w:"Circuit Breaker", ph:"/SUR-kit BREY-ker/", m:"Pemutus arus", ex:"The circuit breaker trips during overload.", ic:"⚡"},
+    {w:"Soldering Iron", ph:"/SOL-der-ing AHY-ern/", m:"Solder", ex:"Heat the soldering iron before use.", ic:"🔥"},
+    {w:"Resistor", ph:"/ri-ZIS-ter/", m:"Resistor", ex:"A resistor limits electric current.", ic:"🎛️"},
+    {w:"Capacitor", ph:"/kuh-PAS-i-ter/", m:"Kapasitor", ex:"The capacitor stores electrical energy.", ic:"🔋"},
+    {w:"Wire Stripper", ph:"/wahyuhr STRIP-er/", m:"Tang kupas kabel", ex:"Use a wire stripper to expose the copper.", ic:"✂️"},
+    {w:"Fuse", ph:"/fyooz/", m:"Sekring", ex:"The fuse protects the circuit from overload.", ic:"🧯"},
+    {w:"Transformer", ph:"/trans-FAWR-mer/", m:"Trafo", ex:"The transformer changes voltage levels.", ic:"🔌"},
+    {w:"Switch", ph:"/swich/", m:"Saklar", ex:"Turn on the switch to power the device.", ic:"💡"},
+    {w:"Relay", ph:"/REE-ley/", m:"Relai", ex:"The relay controls a high-power circuit.", ic:"🔗"},
+  ]},
+  keselamatan: { name:"Keselamatan", icon:"🦺", color:"var(--yellow)", words:[
+    {w:"Safety Goggles", ph:"/SEYF-tee GOG-uhlz/", m:"Kacamata pelindung", ex:"Wear safety goggles when grinding metal.", ic:"🥽"},
+    {w:"Helmet", ph:"/HEL-mit/", m:"Helm", ex:"Always wear a helmet on site.", ic:"⛑️"},
+    {w:"Gloves", ph:"/gluhvz/", m:"Sarung tangan", ex:"Put on gloves before handling chemicals.", ic:"🧤"},
+    {w:"Ear Protection", ph:"/eer pruh-TEK-shuhn/", m:"Pelindung telinga", ex:"Ear protection reduces noise damage.", ic:"👂"},
+    {w:"Fire Extinguisher", ph:"/fahyuhr ik-STING-gwi-sher/", m:"Alat pemadam api", ex:"Keep a fire extinguisher nearby.", ic:"🧯"},
+    {w:"First Aid Kit", ph:"/furst eyd kit/", m:"Kotak P3K", ex:"The first aid kit is in the office.", ic:"🩹"},
+    {w:"Safety Vest", ph:"/SEYF-tee vest/", m:"Rompi keselamatan", ex:"Wear a safety vest in the workshop.", ic:"🦺"},
+    {w:"Respirator Mask", ph:"/RES-puh-rey-ter mask/", m:"Masker respirator", ex:"A respirator mask filters harmful dust.", ic:"😷"},
+    {w:"Steel-toe Boots", ph:"/steel-toh boots/", m:"Sepatu safety", ex:"Steel-toe boots protect your feet.", ic:"🥾"},
+    {w:"Warning Sign", ph:"/WAWR-ning sahyn/", m:"Rambu peringatan", ex:"Follow every warning sign in the lab.", ic:"⚠️"},
+  ]},
+  perkakas: { name:"Perkakas", icon:"🛠️", color:"var(--green)", words:[
+    {w:"Hammer", ph:"/HAM-er/", m:"Palu", ex:"Use a hammer to drive the nail.", ic:"🔨"},
+    {w:"Pliers", ph:"/PLAHY-erz/", m:"Tang", ex:"Grip the wire with pliers.", ic:"🛠️"},
+    {w:"Screwdriver", ph:"/SKROO-drahy-ver/", m:"Obeng", ex:"Tighten the screw with a screwdriver.", ic:"🪛"},
+    {w:"Measuring Tape", ph:"/MEZH-er-ing teyp/", m:"Meteran", ex:"Measure the length with a measuring tape.", ic:"📏"},
+    {w:"Drill", ph:"/dril/", m:"Bor", ex:"Drill a hole in the metal plate.", ic:"🔧"},
+    {w:"Saw", ph:"/saw/", m:"Gergaji", ex:"Cut the wood with a saw.", ic:"🪚"},
+    {w:"Level", ph:"/LEV-uhl/", m:"Waterpas", ex:"Check the surface with a level.", ic:"📐"},
+    {w:"Chisel", ph:"/CHIZ-uhl/", m:"Pahat", ex:"Shape the metal using a chisel.", ic:"🔨"},
+    {w:"File", ph:"/fahyl/", m:"Kikir", ex:"Smooth the edge with a file.", ic:"🗜️"},
+    {w:"Clamp", ph:"/klamp/", m:"Klem / penjepit", ex:"Hold the parts together with a clamp.", ic:"🗜️"},
+  ]},
+};
+
+/* ============ STATE (in-memory only) ============ */
+const state = {
+  score:0, streak:0, bestStreak:0,
+  category:"otomotif",
+  collected:{}, // per category set of collected words
+  scanCurrentWord:null,
+  quiz:{ queue:[], index:0, timer:null, timeLeft:15 },
+  race:{ timer:null, timeLeft:60, score:0, active:false },
+  badgesEarned:new Set(),
+};
+Object.keys(VOCAB).forEach(k=> state.collected[k] = new Set());
+
+const $ = sel => document.querySelector(sel);
+const $$ = sel => document.querySelectorAll(sel);
+
+function speak(text){
+  try{
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US"; u.rate = 0.88;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+function updateHUD(){
+  $("#statScore").textContent = state.score;
+  $("#statStreak").textContent = state.streak;
+}
+
+function addScore(pts, correct){
+  state.score += pts;
+  if(correct){ state.streak++; state.bestStreak = Math.max(state.bestStreak, state.streak); }
+  else { state.streak = 0; }
+  updateHUD();
+}
+
+/* ============ NAVIGATION ============ */
+function showScreen(name){
+  $$(".screen").forEach(s=>s.classList.remove("active"));
+  $("#screen-"+name).classList.add("active");
+  $$(".nav-btn").forEach(b=>b.classList.remove("active"));
+  const navMap = {home:"home", scan:"scan", quiz:"quiz", race:"race", result:"home"};
+  const navBtn = document.querySelector('.nav-btn[data-nav="'+navMap[name]+'"]');
+  if(navBtn) navBtn.classList.add("active");
+}
+
+$$(".nav-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    const target = btn.dataset.nav;
+    if(target==="scan") startScanMode();
+    else if(target==="quiz") startQuizMode();
+    else if(target==="race") startRaceMode();
+    else showScreen("home");
+  });
+});
+
+/* ============ HOME: CATEGORY GRID ============ */
+function renderCatGrid(){
+  const grid = $("#catGrid");
+  grid.innerHTML = "";
+  Object.entries(VOCAB).forEach(([key, cat])=>{
+    const collected = state.collected[key].size;
+    const total = cat.words.length;
+    const card = document.createElement("div");
+    card.className = "cat-card" + (state.category===key ? " selected":"");
+    card.innerHTML = `
+      <span class="icon">${cat.icon}</span>
+      <div class="name">${cat.name}</div>
+      <div class="count">${collected}/${total} kata dikuasai</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${(collected/total)*100}%"></div></div>
+    `;
+    card.addEventListener("click", ()=>{
+      state.category = key;
+      renderCatGrid();
+    });
+    grid.appendChild(card);
+  });
+}
+renderCatGrid();
+updateHUD();
+
+$$(".mode-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    const mode = btn.dataset.mode;
+    if(mode==="scan") startScanMode();
+    if(mode==="quiz") startQuizMode();
+    if(mode==="race") startRaceMode();
+  });
+});
+$("#btnBackHome1").addEventListener("click", ()=>{ stopCamera(); showScreen("home"); renderCatGrid(); });
+$("#btnHome2").addEventListener("click", ()=>{ showScreen("home"); renderCatGrid(); });
+
+/* ============ SCAN & LEARN MODE ============ */
+let camStream = null;
+function startScanMode(){
+  showScreen("scan");
+  $("#arCard").classList.remove("show");
+  $("#scanStatusText").textContent = "SIAP MEMINDAI";
+  updateScanProgress();
+  tryStartCamera();
+}
+function tryStartCamera(){
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" }, audio:false })
+      .then(stream=>{
+        camStream = stream;
+        const v = $("#camVideo");
+        v.srcObject = stream;
+        $("#scanFallback").style.display = "none";
+      })
+      .catch(()=>{ $("#scanFallback").style.display = "block"; });
+  } else {
+    $("#scanFallback").style.display = "block";
+  }
+}
+function stopCamera(){
+  if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream = null; }
+}
+function updateScanProgress(){
+  const cat = VOCAB[state.category];
+  const collected = state.collected[state.category].size;
+  $("#scanBarFill").style.width = (collected/cat.words.length*100)+"%";
+  $("#scanCollected").textContent = collected + " dikumpulkan";
+  $("#scanTotal").textContent = "/ " + cat.words.length + " kata";
+}
+
+$("#btnScan").addEventListener("click", ()=>{
+  const cat = VOCAB[state.category];
+  const collectedSet = state.collected[state.category];
+  let pool = cat.words.filter(w=>!collectedSet.has(w.w));
+  if(pool.length===0) pool = cat.words; // allow re-scan once all collected
+  const word = pool[Math.floor(Math.random()*pool.length)];
+  state.scanCurrentWord = word;
+
+  $("#scanStatusText").textContent = "MEMINDAI...";
+  $("#arCard").classList.remove("show");
+  setTimeout(()=>{
+    $("#scanStatusText").textContent = "OBJEK TERDETEKSI";
+    $("#arIcon").textContent = word.ic;
+    $("#arWord").textContent = word.w.toUpperCase();
+    $("#arPhonetic").textContent = word.ph;
+    $("#arMeaning").innerHTML = "<b>Arti:</b> " + word.m;
+    $("#arExample").textContent = '"' + word.ex + '"';
+    $("#arCard").classList.add("show");
+    speak(word.w);
+  }, 550);
+});
+
+$("#btnSpeak").addEventListener("click", ()=>{
+  if(state.scanCurrentWord) speak(state.scanCurrentWord.w);
+});
+
+$("#btnCollect").addEventListener("click", ()=>{
+  if(!state.scanCurrentWord) return;
+  const key = state.category;
+  const wasNew = !state.collected[key].has(state.scanCurrentWord.w);
+  state.collected[key].add(state.scanCurrentWord.w);
+  if(wasNew){ addScore(5, true); }
+  updateScanProgress();
+  $("#arCard").classList.remove("show");
+  $("#scanStatusText").textContent = "SIAP MEMINDAI";
+
+  const total = Object.values(VOCAB).reduce((a,c)=>a+c.words.length,0);
+  const totalCollected = Object.values(state.collected).reduce((a,s)=>a+s.size,0);
+  if(totalCollected>=total){ checkBadges(); }
+});
+
+/* ============ QUIZ MODE ============ */
+function buildQuizQueue(){
+  const cat = VOCAB[state.category];
+  const shuffled = [...cat.words].sort(()=>Math.random()-0.5);
+  return shuffled.slice(0, Math.min(10, shuffled.length));
+}
+function startQuizMode(){
+  state.quiz.queue = buildQuizQueue();
+  state.quiz.index = 0;
+  state.quiz.correctCount = 0;
+  showScreen("quiz");
+  renderQuizQuestion();
+}
+function renderQuizQuestion(){
+  clearInterval(state.quiz.timer);
+  const q = state.quiz.queue[state.quiz.index];
+  const cat = VOCAB[state.category];
+  $("#quizNum").textContent = `SOAL ${state.quiz.index+1} / ${state.quiz.queue.length}`;
+  $("#quizCat").textContent = cat.name.toUpperCase();
+  $("#quizIcon").textContent = q.ic;
+  $("#quizQuestion").textContent = `Kata untuk "${q.m}" adalah?`;
+  $("#quizSub").textContent = "Pilih jawaban bahasa Inggris yang tepat";
+
+  // build options: 1 correct + 3 distractors from same category
+  let distractors = cat.words.filter(w=>w.w!==q.w).sort(()=>Math.random()-0.5).slice(0,3);
+  let options = [q, ...distractors].sort(()=>Math.random()-0.5);
+
+  const optsWrap = $("#quizOpts");
+  optsWrap.innerHTML = "";
+  const letters = ["A","B","C","D"];
+  options.forEach((opt, i)=>{
+    const btn = document.createElement("button");
+    btn.className = "opt-btn";
+    btn.innerHTML = `<span class="opt-letter">${letters[i]}</span><span>${opt.w}</span>`;
+    btn.addEventListener("click", ()=> handleQuizAnswer(opt, q, btn));
+    optsWrap.appendChild(btn);
+  });
+
+  state.quiz.timeLeft = 15;
+  $("#quizTimerFill").style.width = "100%";
+  state.quiz.timer = setInterval(()=>{
+    state.quiz.timeLeft -= 1;
+    $("#quizTimerFill").style.width = (state.quiz.timeLeft/15*100)+"%";
+    if(state.quiz.timeLeft<=0){
+      clearInterval(state.quiz.timer);
+      handleQuizAnswer(null, q, null);
+    }
+  }, 1000);
+}
+function handleQuizAnswer(chosen, correct, btnEl){
+  clearInterval(state.quiz.timer);
+  $$("#quizOpts .opt-btn").forEach(b=> b.style.pointerEvents = "none");
+  $$("#quizOpts .opt-btn").forEach(b=>{
+    if(b.textContent.trim().includes(correct.w)) b.classList.add("correct");
+  });
+  const isCorrect = chosen && chosen.w===correct.w;
+  if(!isCorrect && btnEl) btnEl.classList.add("wrong");
+  if(isCorrect){ addScore(10 + state.streak*2, true); state.quiz.correctCount = (state.quiz.correctCount||0)+1; }
+  else { addScore(0, false); }
+
+  setTimeout(()=>{
+    state.quiz.index++;
+    if(state.quiz.index < state.quiz.queue.length){
+      renderQuizQuestion();
+    } else {
+      finishQuiz();
+    }
+  }, 1100);
+}
+function finishQuiz(){
+  checkBadges();
+  showResult("Quiz Selesai!", `${state.quiz.correctCount}/${state.quiz.queue.length} jawaban benar`);
+}
+
+/* ============ WORD RACE MODE ============ */
+function allWordsFlat(){
+  let all = [];
+  Object.values(VOCAB).forEach(c=> c.words.forEach(w=> all.push(w)));
+  return all;
+}
+function startRaceMode(){
+  state.race.timeLeft = 60;
+  state.race.score = 0;
+  state.race.active = true;
+  showScreen("race");
+  $("#raceTimer").textContent = state.race.timeLeft;
+  nextRaceWord();
+  clearInterval(state.race.timer);
+  state.race.timer = setInterval(()=>{
+    state.race.timeLeft--;
+    $("#raceTimer").textContent = state.race.timeLeft;
+    if(state.race.timeLeft<=0){
+      clearInterval(state.race.timer);
+      state.race.active = false;
+      checkBadges();
+      showResult("Waktu Habis!", `${state.race.score} kata terjawab benar`);
+    }
+  }, 1000);
+}
+function nextRaceWord(){
+  const all = allWordsFlat();
+  const word = all[Math.floor(Math.random()*all.length)];
+  state.race.current = word;
+  $("#raceIcon").textContent = word.ic;
+  $("#raceWord").textContent = word.w.toUpperCase();
+
+  let distractors = all.filter(w=>w.m!==word.m).sort(()=>Math.random()-0.5).slice(0,3);
+  let options = [word, ...distractors].sort(()=>Math.random()-0.5);
+  const wrap = $("#raceOpts");
+  wrap.innerHTML = "";
+  options.forEach(opt=>{
+    const btn = document.createElement("div");
+    btn.className = "race-opt";
+    btn.textContent = opt.m;
+    btn.addEventListener("click", ()=>{
+      if(!state.race.active) return;
+      $$("#raceOpts .race-opt").forEach(b=>b.style.pointerEvents="none");
+      const isCorrect = opt.m===word.m;
+      btn.classList.add(isCorrect ? "correct":"wrong");
+      if(isCorrect){ state.race.score++; addScore(4, true); }
+      else{ addScore(0,false);
+        $$("#raceOpts .race-opt").forEach(b=>{ if(b.textContent===word.m) b.classList.add("correct"); });
+      }
+      setTimeout(()=>{ if(state.race.active) nextRaceWord(); }, 450);
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+/* ============ BADGES & RESULTS ============ */
+const BADGE_DEFS = [
+  { id:"otomotif", icon:"🚗", name:"Otomotif", test:()=> state.collected.otomotif.size >= VOCAB.otomotif.words.length },
+  { id:"kelistrikan", icon:"⚡", name:"Listrik", test:()=> state.collected.kelistrikan.size >= VOCAB.kelistrikan.words.length },
+  { id:"keselamatan", icon:"🦺", name:"Safety", test:()=> state.collected.keselamatan.size >= VOCAB.keselamatan.words.length },
+  { id:"perkakas", icon:"🛠️", name:"Perkakas", test:()=> state.collected.perkakas.size >= VOCAB.perkakas.words.length },
+  { id:"streak", icon:"🔥", name:"Streak 5+", test:()=> state.bestStreak >= 5 },
+  { id:"speed", icon:"🏁", name:"Speed Demon", test:()=> state.race.score >= 15 },
+];
+function checkBadges(){
+  BADGE_DEFS.forEach(b=>{ if(b.test()) state.badgesEarned.add(b.id); });
+}
+function renderBadges(){
+  const grid = $("#badgeGrid");
+  grid.innerHTML = "";
+  BADGE_DEFS.forEach(b=>{
+    const earned = state.badgesEarned.has(b.id);
+    const el = document.createElement("div");
+    el.className = "badge" + (earned ? " earned":"");
+    el.innerHTML = `<div class="b-icon">${b.icon}</div><div class="b-name">${b.name}</div>`;
+    grid.appendChild(el);
+  });
+}
+function showResult(title, detail){
+  $("#resultTitle").textContent = title;
+  $("#resultScore").textContent = state.score;
+  $("#resultDetail").textContent = detail;
+  renderBadges();
+  showScreen("result");
+}
+$("#btnReplay").addEventListener("click", ()=>{
+  showScreen("home"); renderCatGrid();
+});
+
+window.addEventListener("beforeunload", stopCamera);
+})();
+</script>
+</body>
+</html>
